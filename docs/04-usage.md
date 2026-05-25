@@ -1,8 +1,10 @@
 ---
-title: Resources
+title: Usage
 ---
 
-# Resources
+# Usage
+
+This guide covers the shipped marketplace resources and the admin flows around them.
 
 The plugin provides four Filament resources.
 

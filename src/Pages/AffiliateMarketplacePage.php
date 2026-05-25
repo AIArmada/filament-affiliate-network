@@ -18,7 +18,6 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -51,12 +50,12 @@ final class AffiliateMarketplacePage extends Page
         return config('filament-affiliate-network.navigation.group', 'Affiliate Network');
     }
 
-    public static function getNavigationSort(): ?int
+    public static function getNavigationSort(): int
     {
         return config('filament-affiliate-network.navigation.sort', 50) + 10;
     }
 
-    public function getTitle(): string | Htmlable
+    public function getTitle(): string
     {
         return 'Offer Marketplace';
     }

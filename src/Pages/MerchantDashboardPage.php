@@ -14,7 +14,6 @@ use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Collection;
 use UnitEnum;
 
@@ -35,12 +34,12 @@ final class MerchantDashboardPage extends Page
         return config('filament-affiliate-network.navigation.group', 'Affiliate Network');
     }
 
-    public static function getNavigationSort(): ?int
+    public static function getNavigationSort(): int
     {
         return config('filament-affiliate-network.navigation.sort', 50) - 1;
     }
 
-    public function getTitle(): string | Htmlable
+    public function getTitle(): string
     {
         return 'Merchant Dashboard';
     }
