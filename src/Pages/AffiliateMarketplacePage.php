@@ -128,23 +128,30 @@ final class AffiliateMarketplacePage extends Page
             ? $user->getEmail()
             : ($user->email ?? null);
 
-        if ($email === null) {
-            return null;
-        }
+        $contactEmail = is_string($email) ? mb_strtolower($email) : null;
 
         // Public marketplace: find the user's affiliate regardless of owner — explicit global scope bypass.
-        // contact_email is a virtual attribute stored in contact_methods, not a DB column.
-        $this->resolvedAffiliate = OwnerContext::withOwner(null, fn (): ?Affiliate => Affiliate::query()
-            ->withoutOwnerScope()
-            ->whereHas('contactMethods', function (Builder $query) use ($email): void {
-                $query->withoutGlobalScope(OwnerScope::class)
-                    ->where('type', 'email')
-                    ->where('purpose', 'general')
-                    ->where(fn (Builder $q) => $q->where('value', $email)
-                        ->orWhere('normalized_value', $email));
-            })
-            ->whereState('status', Active::class)
-            ->first());
+        // Resolve by direct owner match (owner_type/owner_id) first, then fall back to email contact method.
+        $this->resolvedAffiliate = OwnerContext::withOwner(null, function () use ($user, $contactEmail): ?Affiliate {
+            return Affiliate::query()
+                ->withoutOwnerScope()
+                ->where(function (Builder $query) use ($user, $contactEmail): void {
+                    $query->where('owner_type', $user->getMorphClass())
+                        ->where('owner_id', $user->getKey());
+
+                    if ($contactEmail !== null && $contactEmail !== '') {
+                        $query->orWhereHas('contactMethods', function (Builder $contactMethods) use ($contactEmail): void {
+                            $contactMethods
+                                ->withoutGlobalScope(OwnerScope::class)
+                                ->where('type', 'email')
+                                ->where('purpose', 'general')
+                                ->whereRaw('LOWER(COALESCE(normalized_value, value)) = ?', [$contactEmail]);
+                        });
+                    }
+                })
+                ->whereState('status', Active::class)
+                ->first();
+        });
 
         return $this->resolvedAffiliate;
     }

@@ -37,11 +37,12 @@ final class AffiliateOfferApplicationsTable
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn ($state): string => match (is_string($state) ? $state : $state::getName()) {
                         'approved' => 'success',
                         'pending' => 'warning',
                         default => 'danger',
-                    }),
+                    })
+                    ->formatStateUsing(fn ($state): string => is_string($state) ? ucfirst($state) : $state->label()),
 
                 TextColumn::make('reviewed_by')
                     ->toggleable(isToggledHiddenByDefault: true),

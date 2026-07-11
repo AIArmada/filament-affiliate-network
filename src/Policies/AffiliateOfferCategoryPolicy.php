@@ -11,41 +11,41 @@ final class AffiliateOfferCategoryPolicy
 {
     public function viewAny(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
     public function view(Authorizable $user, AffiliateOfferCategory $category): bool
     {
-        return true;
+        return false;
     }
 
     public function create(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
     public function update(Authorizable $user, AffiliateOfferCategory $category): bool
     {
-        return true;
+        return false;
     }
 
     public function delete(Authorizable $user, AffiliateOfferCategory $category): bool
     {
-        return true;
+        return false;
     }
 
     public function deleteAny(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
-    public function restore(Authorizable $user, AffiliateOfferCategory $category): bool
+    public function restore(Authorizable $user, ?AffiliateOfferCategory $category = null): bool
     {
-        return true;
+        return false;
     }
 
-    public function forceDelete(Authorizable $user, AffiliateOfferCategory $category): bool
+    public function forceDelete(Authorizable $user, ?AffiliateOfferCategory $category = null): bool
     {
-        return true;
+        return false;
     }
 }

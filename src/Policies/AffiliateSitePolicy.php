@@ -11,41 +11,41 @@ final class AffiliateSitePolicy
 {
     public function viewAny(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
     public function view(Authorizable $user, AffiliateSite $site): bool
     {
-        return true;
+        return false;
     }
 
     public function create(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
     public function update(Authorizable $user, AffiliateSite $site): bool
     {
-        return true;
+        return false;
     }
 
     public function delete(Authorizable $user, AffiliateSite $site): bool
     {
-        return true;
+        return false;
     }
 
     public function deleteAny(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
-    public function restore(Authorizable $user, AffiliateSite $site): bool
+    public function restore(Authorizable $user, ?AffiliateSite $site = null): bool
     {
-        return true;
+        return false;
     }
 
-    public function forceDelete(Authorizable $user, AffiliateSite $site): bool
+    public function forceDelete(Authorizable $user, ?AffiliateSite $site = null): bool
     {
-        return true;
+        return false;
     }
 }

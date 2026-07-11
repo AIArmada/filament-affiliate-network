@@ -11,41 +11,41 @@ final class AffiliateOfferApplicationPolicy
 {
     public function viewAny(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
     public function view(Authorizable $user, AffiliateOfferApplication $application): bool
     {
-        return true;
+        return false;
     }
 
     public function create(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
     public function update(Authorizable $user, AffiliateOfferApplication $application): bool
     {
-        return true;
+        return false;
     }
 
     public function delete(Authorizable $user, AffiliateOfferApplication $application): bool
     {
-        return true;
+        return false;
     }
 
     public function deleteAny(Authorizable $user): bool
     {
-        return true;
+        return false;
     }
 
-    public function restore(Authorizable $user, AffiliateOfferApplication $application): bool
+    public function restore(Authorizable $user, ?AffiliateOfferApplication $application = null): bool
     {
-        return true;
+        return false;
     }
 
-    public function forceDelete(Authorizable $user, AffiliateOfferApplication $application): bool
+    public function forceDelete(Authorizable $user, ?AffiliateOfferApplication $application = null): bool
     {
-        return true;
+        return false;
     }
 }
