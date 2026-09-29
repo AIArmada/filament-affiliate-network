@@ -6,9 +6,6 @@ title: Pages & Widgets
 
 ## Pages
 
-The plugin registers exactly one page: `MerchantDashboardPage`. There is no
-marketplace/discovery page in this package.
-
 ### MerchantDashboardPage
 
 Analytics dashboard for merchants.
@@ -18,28 +15,12 @@ network-wide widgets, so its counts and pending applications cannot mix
 merchants.
 
 **Features:**
-- Stats overview: Sites, Verified Sites, Active Offers, Pending Applications
-- 5 most recent pending applications
-- Top 5 offers by application count
-
-**Methods:**
-
-```php
-$this->getSitesCount();              // int
-$this->getVerifiedSitesCount();      // int
-$this->getActiveOffersCount();       // int
-$this->getPendingApplicationsCount();// int
-$this->getRecentApplications();      // Collection<AffiliateOfferApplication>
-$this->getTopOffers();               // Collection<AffiliateOffer>
-$this->getStats();                   // Stat[]
-```
+- Site overview
+- Offer performance
+- Application statistics
+- Click/conversion metrics
 
 **URL:** `/affiliate-network/merchant-dashboard`
-
-Access is gated by `NetworkAdminAccess::allows()` — it reads
-`filament-affiliate-network.authorization.admin_ability` (default
-`affiliate-network.admin`). `canAccess()` also enforces the panel's own
-authorization.
 
 **Customization:**
 
@@ -69,9 +50,8 @@ Overview statistics for the entire network.
 
 **Sort Order:** 1 (appears first on dashboard)
 
-This is a network-wide admin report gated by
-`NetworkAdminAccess::allows()`. It uses `OwnerCache::remember(null, ...)` for a
-30-second cache.
+This is a network-wide admin report. It uses the explicit global context and a
+30-second owner-keyed cache.
 
 Total Revenue groups link revenue by link currency. Single-currency networks
 show the raw sum; mixed networks convert to
@@ -104,34 +84,24 @@ class Dashboard extends BaseDashboard
 
 **Customization:**
 
-`NetworkStatsWidget` is `final` — it cannot be extended. Build your own widget
-instead and reuse the shared aggregator:
-
 ```php
 namespace App\Filament\Widgets;
 
-use AIArmada\FilamentAffiliateNetwork\Support\NetworkStatsAggregator;
-use AIArmada\FilamentAffiliateNetwork\Support\NetworkAdminAccess;
-use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
+use AIArmada\FilamentAffiliateNetwork\Widgets\NetworkStatsWidget as BaseWidget;
 
-class NetworkStatsWidget extends StatsOverviewWidget
+class NetworkStatsWidget extends BaseWidget
 {
     protected static ?int $sort = 5;
-
-    public static function canView(): bool
-    {
-        return NetworkAdminAccess::allows();
-    }
-
+    
     protected function getStats(): array
     {
-        $aggregated = NetworkStatsAggregator::aggregate();
-
-        return [
-            Stat::make('Custom', number_format($aggregated['activeSites']))
-                ->icon('heroicon-o-star'),
-        ];
+        $stats = parent::getStats();
+        
+        // Add custom stat
+        $stats[] = Stat::make('Custom', $this->customValue())
+            ->icon('heroicon-o-star');
+            
+        return $stats;
     }
 }
 ```
@@ -142,12 +112,8 @@ class NetworkStatsWidget extends StatsOverviewWidget
 
 Display top performing offers.
 
-This is a network-wide admin leaderboard gated by
-`NetworkAdminAccess::allows()`, with the same `OwnerCache::remember(null, ...)`
-30-second cache policy as `NetworkStatsWidget`. It is `final` — build your own
-widget rather than extending it.
-
-**Sort Order:** 2
+This is a network-wide admin leaderboard with the same explicit-global and
+30-second owner-keyed cache policy as `NetworkStatsWidget`.
 
 **Features:**
 - Top 10 offers by clicks, with per-offer conversions and revenue
@@ -161,18 +127,16 @@ set and hide the true leaders outside it.
 
 ## Widget Authorization
 
-Both shipped widgets delegate to `NetworkAdminAccess::allows()`. A custom
-widget should do the same so it matches:
+Control widget visibility:
 
 ```php
-use AIArmada\FilamentAffiliateNetwork\Support\NetworkAdminAccess;
 use Filament\Widgets\Widget;
 
-class MyWidget extends Widget
+class NetworkStatsWidget extends Widget
 {
     public static function canView(): bool
     {
-        return NetworkAdminAccess::allows();
+        return auth()->user()->hasRole('admin');
     }
 }
 ```

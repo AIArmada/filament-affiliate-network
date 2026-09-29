@@ -4,9 +4,9 @@ title: Usage
 
 # Usage
 
-This guide covers the shipped admin resources and the flows around them.
+This guide covers the shipped marketplace resources and the admin flows around them.
 
-The plugin provides four Filament resources (sites, offers, categories, applications), a merchant dashboard page, and two network reporting widgets. There is no marketplace page in this package.
+The plugin provides four Filament resources (sites, offers, categories, applications), a merchant dashboard page, and two network reporting widgets.
 
 The site, offer, category, application, merchant dashboard, and network widget surfaces require the configured `affiliate-network.admin` ability.
 
@@ -67,6 +67,10 @@ Manage merchant sites/domains.
 |--------|-------------|
 | Edit | Edit site details |
 | Verify | Manually verify a pending site (runs inside the site's owner context) |
+| Sync catalog | Pull the merchant catalog now |
+| Reject | Reject a site |
+| Suspend | Suspend a site |
+| Reinstate | Reinstate a suspended/rejected site |
 | Delete | Delete site |
 
 The edit page adds two header actions: **Sync catalog** (pull the
@@ -97,7 +101,7 @@ Manage affiliate offers.
 - Status (badge)
 - Commission (formatted)
 - Fee in basis points (toggleable; blank uses the configured default)
-- Source (badge: synced/manual)
+- Source (badge: mirrored/manual)
 - Featured (icon)
 - Visibility (badge)
 - Applications count
@@ -118,7 +122,7 @@ Manage affiliate offers.
 - Fixed amount in minor units (per conversion; takes precedence when set)
 - Currency (three-letter code)
 - Cookie duration (whole days; negatives rejected)
-- Source (synced/manual; editing any rate field flips to manual)
+- Source (mirrored/manual; editing any rate-block field flips to manual)
 - Network fee in basis points (marketplace take-rate; empty uses the configured default)
 - Volume tiers (repeater: floor in minor units + rate in basis points)
 
@@ -205,13 +209,12 @@ Review affiliate applications.
 
 ### Table Columns
 
-- Affiliate code (searchable, sortable)
-- Affiliate email (display-only; it is a virtual accessor, not a column)
+- Affiliate ID (searchable, copyable, toggleable)
 - Offer name (searchable, sortable)
 - Status (badge)
-- Reason (toggleable)
-- Submitted at
+- Reviewed by (toggleable)
 - Reviewed at (toggleable)
+- Submitted at
 
 Approve, reject, revoke, and bulk-approve run each mutation inside the owning affiliate's owner context so cross-tenant review works when owner scoping is enabled.
 
@@ -241,7 +244,6 @@ Approve, reject, revoke, and bulk-approve run each mutation inside the owning af
 
 - Status (pending, approved, rejected, revoked)
 - Offer
-- Date range
 
 ### Status Colors
 
@@ -250,71 +252,49 @@ Approve, reject, revoke, and bulk-approve run each mutation inside the owning af
 | `pending` | Warning (yellow) |
 | `approved` | Success (green) |
 | `rejected` | Danger (red) |
-| `revoked` | Gray |
+| `revoked` | Danger (red, default) |
 
 ---
 
 ## Extending Resources
 
-### Add a Custom Resource
-
-Every shipped resource is `final`. Write your own resource and reuse the
-shipped schema/table classes:
+### Add Custom Resource
 
 ```php
 namespace App\Filament\Resources;
 
-use AIArmada\FilamentAffiliateNetwork\Resources\AffiliateOfferResource\Schemas\AffiliateOfferForm;
-use AIArmada\FilamentAffiliateNetwork\Resources\AffiliateOfferResource\Tables\AffiliateOffersTable;
-use AIArmada\AffiliateNetwork\Models\AffiliateOffer;
-use Filament\Schemas\Schema;
-use Filament\Tables\Table;
+use AIArmada\FilamentAffiliateNetwork\Resources\AffiliateOfferResource as BaseResource;
 
-class AffiliateOfferResource extends Resource
+class AffiliateOfferResource extends BaseResource
 {
-    protected static ?string $model = AffiliateOffer::class;
-
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-megaphone';
-
-    public static function getNavigationGroup(): string | \UnitEnum | null
-    {
-        return config('filament-affiliate-network.navigation.group');
-    }
-
-    public static function getNavigationSort(): ?int
-    {
-        return config('filament-affiliate-network.navigation.sort', 50) + 1;
-    }
-
-    public static function form(Schema $schema): Schema
-    {
-        return AffiliateOfferForm::configure($schema);
-    }
-
-    public static function table(Table $table): Table
-    {
-        return AffiliateOffersTable::configure($table);
-    }
-
+    // Override navigation
+    protected static ?string $navigationIcon = 'heroicon-o-megaphone';
+    
+    // Add custom relation managers (Links and Legs managers already ship)
     public static function getRelations(): array
     {
         return [
-            RelationManagers\LinksRelationManager::class,
-            RelationManagers\LegsRelationManager::class,
+            ...parent::getRelations(),
+            RelationManagers\CreativesRelationManager::class,
         ];
     }
 }
 ```
 
-### Register the Custom Resource
+### Register Custom Resource
 
-`FilamentAffiliateNetworkPlugin` registers a fixed set and exposes no
-`resources()` method. Register your own resource from the panel provider
-instead:
+The plugin registers a fixed set, so register overrides on the panel:
 
 ```php
-$panel->resources([
-    \App\Filament\Resources\AffiliateOfferResource::class,
-    // ...plus any default resources you still want
-]);
+use Filament\Panel;
+
+public function panel(Panel $panel): Panel
+{
+    return $panel
+        ->plugin(FilamentAffiliateNetworkPlugin::make())
+        ->resources([
+            \App\Filament\Resources\AffiliateOfferResource::class,
+            // ...default resources to keep
+        ]);
+}
 ```
