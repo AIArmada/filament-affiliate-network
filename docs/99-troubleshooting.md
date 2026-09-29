@@ -87,6 +87,60 @@ TextInput::make('domain')->unique(ignoreRecord: true)
 
 3. Check foreign key relationships exist.
 
+## Page Issues
+
+### Merchant Dashboard Returns 404
+
+**Symptoms:** `/affiliate-network/merchant-dashboard` not found.
+
+**Solutions:**
+
+1. Verify the plugin is registered on the panel, then re-check routes:
+   ```bash
+   php artisan route:list | grep merchant-dashboard
+   php artisan route:clear
+   ```
+
+> **info**
+> This package ships no affiliate marketplace page. If you are looking for
+> `/affiliate-network/marketplace`, it belongs to another package or to a
+> custom page of your own. The `marketplace.*` config keys are placeholders —
+> nothing in the code reads them.
+
+### Can't Apply to Offers
+
+**Symptoms:** Apply button doesn't work or shows error.
+
+**Solutions:**
+
+1. User must have affiliate record:
+```php
+$user->affiliate; // Must not be null
+```
+
+2. Check affiliate email matches user:
+```php
+Affiliate::where('contact_email', $user->email)->first();
+```
+
+3. Check cooldown period for rejected applications.
+
+### Links Not Generating
+
+**Symptoms:** "Get Link" button fails.
+
+**Solutions:**
+
+1. Verify application is approved:
+```php
+$application->status === 'approved';
+```
+
+2. Check OfferLinkService is registered:
+```php
+app(\AIArmada\AffiliateNetwork\Services\OfferLinkService::class);
+```
+
 ## Widget Issues
 
 ### Widgets Not Displaying

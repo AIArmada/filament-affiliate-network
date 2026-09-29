@@ -13,9 +13,9 @@ Guide to testing the Filament Affiliate Network plugin.
 ```php
 // composer.json (dev dependencies)
 "require-dev": {
-    "pestphp/pest": "^3.0",
-    "pestphp/pest-plugin-livewire": "^3.0",
-    "livewire/livewire": "^3.0"
+    "pestphp/pest": "^5.2",
+    "pestphp/pest-plugin-livewire": "^5.0",
+    "livewire/livewire": "^4.4"
 }
 ```
 
@@ -26,11 +26,10 @@ Guide to testing the Filament Affiliate Network plugin.
 
 namespace Tests;
 
-use AIArmada\AffiliateNetwork\Models\AffiliateSite;
-use AIArmada\AffiliateNetwork\Models\AffiliateOffer;
-use AIArmada\AffiliateNetwork\Models\AffiliateOfferApplication;
+use AIArmada\FilamentAffiliateNetwork\Support\NetworkAdminAccess;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 
 abstract class FilamentTestCase extends TestCase
 {
@@ -41,12 +40,23 @@ abstract class FilamentTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->admin = User::factory()->create();
         $this->actingAs($this->admin);
+
+        // Every shipped page, table, and widget gates on NetworkAdminAccess.
+        Gate::define(config('filament-affiliate-network.authorization.admin_ability'), fn () => true);
     }
 }
 ```
+
+> **warning:**
+> Resources, pages, and widgets are all gated by
+> `NetworkAdminAccess::allows()`, which reads
+> `filament-affiliate-network.authorization.admin_ability`
+> (`affiliate-network.admin`). Without granting that ability, page and widget
+> tests abort with `403` before rendering. `NetworkAdminAccess` has no
+> `grant()` helper — define the Gate ability in your test case.
 
 ---
 
@@ -185,7 +195,7 @@ it('can create offer', function () {
     expect(AffiliateOffer::where('slug', 'summer-sale')->exists())->toBeTrue();
 });
 
-it('can activate offer via action', function () {
+it('can publish an archived offer via the activate action', function () {
     $offer = AffiliateOffer::factory()->archived()->create();
 
     livewire(AffiliateOfferResource\Pages\ListAffiliateOffers::class)
@@ -194,7 +204,7 @@ it('can activate offer via action', function () {
     expect($offer->fresh()->status)->toBe(OfferStatus::Published);
 });
 
-it('can pause offer via action', function () {
+it('can archive a published offer via the pause action', function () {
     $offer = AffiliateOffer::factory()->published()->create();
 
     livewire(AffiliateOfferResource\Pages\ListAffiliateOffers::class)
@@ -213,6 +223,12 @@ it('filters offers by status', function () {
         ->assertCanNotSeeTableRecords([$archived]);
 });
 ```
+
+> **warning:**
+> `AffiliateOffer` declares no `STATUS_*` constants and there is no `active` /
+> `paused` status. `OfferStatus` is `Draft | Published | Archived`, and the
+> `activate` / `pause` actions map onto `Published` / `Archived`. The factory
+> has no `active()` or `paused()` state either.
 
 ### AffiliateOfferApplicationResource Tests
 
@@ -280,9 +296,16 @@ it('can bulk approve applications', function () {
 });
 ```
 
+> **warning:**
+> `AffiliateOfferApplication` declares no `STATUS_*` constants. Read the
+> `ApplicationStatus` enum (`Pending | Approved | Rejected | Revoked`).
+
 ---
 
 ## Testing Pages
+
+The package ships one page: `MerchantDashboardPage`. There is no
+marketplace/discovery page.
 
 ### Merchant Dashboard Page Tests
 
@@ -362,6 +385,11 @@ it('displays correct statistics', function () {
 });
 ```
 
+> **warning:**
+> `getStats()` is a `protected` method on the widget. Assert against rendered
+> output or the `NetworkStatsAggregator::aggregate()` array instead of calling
+> it through Livewire.
+
 ### TopOffersWidget Tests
 
 ```php
@@ -387,6 +415,12 @@ it('displays offers ordered by clicks', function () {
         ->assertCanSeeTableRecords([$highClicks, $lowClicks]);
 });
 ```
+
+> **warning:**
+> `TopOffersWidget` caches its top-10 offer ids for 30 seconds via
+> `OwnerCache`. Call
+> `OwnerCache::forget(null, 'affiliate-network.top-offer-ids')` between
+> assertions, or the first test's ids will be reused.
 
 ---
 

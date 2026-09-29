@@ -51,47 +51,46 @@ Gate::define('affiliate-network.admin', fn (User $user): bool => $user->is_admin
 
 | Key | Description | Default |
 |-----|-------------|---------|
-| `show_commission_rates` | Reserved: no marketplace page ships in this version | `true` |
-| `show_cookie_duration` | Reserved: no marketplace page ships in this version | `true` |
+| `show_commission_rates` | Reserved; **not read by the current code** | `true` |
+| `show_cookie_duration` | Reserved; **not read by the current code** | `true` |
+
+There is no marketplace page in this package, so nothing consumes these keys
+today. Treat them as placeholders.
 
 ## Customizing Resources
 
 ### Change Navigation Label
 
-Extend the resource:
-
-```php
-namespace App\Filament\Resources;
-
-use AIArmada\FilamentAffiliateNetwork\Resources\AffiliateOfferResource as BaseResource;
-
-class AffiliateOfferResource extends BaseResource
-{
-    protected static ?string $navigationLabel = 'Campaigns';
-    
-    protected static ?string $modelLabel = 'Campaign';
-}
-```
+Every shipped resource is `final`, so neither `getNavigationLabel()` nor the
+`$navigationLabel` property can be overridden by subclassing. The extension
+seams are the schema and table classes under
+`Resources/<Resource>/{Schemas,Tables}/` — write your own `Resource` and point
+`form()` / `table()` at them. See [Usage](04-usage.md#extending-resources) for a
+worked example.
 
 ### Add Custom Columns
+
+`getTableColumns()` is a v3-era hook and no longer exists in Filament v5. Build
+the column list explicitly:
 
 ```php
 public static function table(Table $table): Table
 {
-    return parent::table($table)
-        ->columns([
-            // Re-declare the parent columns you want to keep, then add yours:
-            Tables\Columns\TextColumn::make('custom_field'),
-        ]);
+    return $table->columns([
+        Tables\Columns\TextColumn::make('name'),
+        Tables\Columns\TextColumn::make('custom_field'),
+    ]);
 }
 ```
 
 ### Add Custom Form Fields
 
+`getFormSchema()` is likewise gone. Compose components on the `Schema`:
+
 ```php
 public static function form(Schema $schema): Schema
 {
-    return parent::form($schema)
+    return $schema
         ->components([
             // Re-declare the parent components you want to keep, then add yours:
             Section::make('Custom')
@@ -104,36 +103,32 @@ public static function form(Schema $schema): Schema
 
 ## Customizing Pages
 
-### Override Merchant Dashboard Page
+### Override the Merchant Dashboard View
 
-Create your own page:
+`MerchantDashboardPage` is `final`, but its Blade view is publishable:
 
-```php
-namespace App\Filament\Pages;
-
-use AIArmada\FilamentAffiliateNetwork\Pages\MerchantDashboardPage as BasePage;
-
-class MerchantDashboardPage extends BasePage
-{
-    protected static ?string $title = 'Network Overview';
-}
+```bash
+php artisan vendor:publish --tag=filament-affiliate-network-views
 ```
 
 ## Customizing Widgets
 
-### Override Stats Widget
+### Replace the Stats Widget
+
+`NetworkStatsWidget` is `final`. Write your own `StatsOverviewWidget` and
+register it on the panel:
 
 ```php
 namespace App\Filament\Widgets;
 
-use AIArmada\FilamentAffiliateNetwork\Widgets\NetworkStatsWidget as BaseWidget;
+use Filament\Widgets\StatsOverviewWidget;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 
-class NetworkStatsWidget extends BaseWidget
+class NetworkStatsWidget extends StatsOverviewWidget
 {
     protected function getStats(): array
     {
         return [
-            ...parent::getStats(),
             Stat::make('Custom Metric', $this->calculateCustomMetric()),
         ];
     }
@@ -144,22 +139,21 @@ class NetworkStatsWidget extends BaseWidget
 
 ### Use a Custom Plugin Class
 
-`FilamentAffiliateNetworkPlugin` registers a fixed set of resources/pages/widgets. To disable components, extend the plugin and register only the components you want:
+`FilamentAffiliateNetworkPlugin` is `final` and has no `resources()` /
+`pages()` / `widgets()` methods — it registers a fixed set. To change what the
+panel gets, register components explicitly in your `PanelProvider` instead of
+the plugin:
 
 ```php
-use AIArmada\FilamentAffiliateNetwork\FilamentAffiliateNetworkPlugin;
 use AIArmada\FilamentAffiliateNetwork\Resources\AffiliateOfferResource;
 use AIArmada\FilamentAffiliateNetwork\Resources\AffiliateSiteResource;
-use Filament\Panel;
 
-final class CustomAffiliateNetworkPlugin extends FilamentAffiliateNetworkPlugin
+public function panel(Panel $panel): Panel
 {
-    public function register(Panel $panel): void
-    {
-        $panel->resources([
+    return $panel
+        ->resources([
             AffiliateSiteResource::class,
             AffiliateOfferResource::class,
         ]);
-    }
 }
 ```

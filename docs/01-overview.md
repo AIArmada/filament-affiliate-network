@@ -77,17 +77,28 @@ filament-affiliate-network/
 └── src/
     ├── FilamentAffiliateNetworkPlugin.php
     ├── FilamentAffiliateNetworkServiceProvider.php
+    ├── Actions/
+    │   └── SyncSiteCatalog.php
     ├── Pages/
     │   └── MerchantDashboardPage.php
+    ├── Policies/
+    │   ├── AffiliateOfferApplicationPolicy.php
+    │   ├── AffiliateOfferCategoryPolicy.php
+    │   ├── AffiliateOfferPolicy.php
+    │   └── AffiliateSitePolicy.php
     ├── Resources/
     │   ├── AffiliateSiteResource.php
     │   │   └── Pages/ (List, Create, Edit)
     │   ├── AffiliateOfferResource.php
-    │   │   └── Pages/ (List, Create, Edit)
+    │   │   ├── Pages/ (List, Create, Edit)
+    │   │   └── RelationManagers/ (Links, Legs)
     │   ├── AffiliateOfferCategoryResource.php
     │   │   └── Pages/ (List, Create, Edit)
     │   └── AffiliateOfferApplicationResource.php
     │       └── Pages/ (List, View)
+    ├── Support/
+    │   ├── NetworkAdminAccess.php
+    │   └── NetworkStatsAggregator.php
     └── Widgets/
         ├── NetworkStatsWidget.php
         └── TopOffersWidget.php
