@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace AIArmada\FilamentAffiliateNetwork\Resources\AffiliateSiteResource\Tables;
 
+use AIArmada\AffiliateNetwork\Actions\ReinstateSite;
+use AIArmada\AffiliateNetwork\Actions\RejectSite;
+use AIArmada\AffiliateNetwork\Actions\SuspendSite;
+use AIArmada\AffiliateNetwork\Actions\VerifySite;
 use AIArmada\AffiliateNetwork\Models\AffiliateSite;
 use AIArmada\CommerceSupport\Support\OwnerContext;
 use AIArmada\FilamentAffiliateNetwork\Actions\SyncSiteCatalog;
-use Carbon\CarbonImmutable;
 use Filament\Actions;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -62,22 +65,14 @@ final class AffiliateSitesTable
             ])
             ->actions([
                 Actions\EditAction::make(),
-                Actions\Action::make('sync_catalog')
-                    ->label('Sync catalog')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->action(fn (AffiliateSite $record): array => app(SyncSiteCatalog::class)->handle($record)),
+                SyncSiteCatalog::make(),
                 Actions\Action::make('verify')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->requiresConfirmation()
                     ->visible(fn (AffiliateSite $record): bool => $record->isPending())
                     ->action(function (AffiliateSite $record): void {
-                        self::transitionSite($record, [
-                            'status' => AffiliateSite::STATUS_VERIFIED,
-                            'verified_at' => CarbonImmutable::now(),
-                        ]);
+                        self::withSiteOwner($record, fn (): AffiliateSite => app(VerifySite::class)->execute($record));
                     }),
                 Actions\Action::make('reject')
                     ->icon('heroicon-o-x-mark')
@@ -85,9 +80,7 @@ final class AffiliateSitesTable
                     ->requiresConfirmation()
                     ->visible(fn (AffiliateSite $record): bool => $record->isPending())
                     ->action(function (AffiliateSite $record): void {
-                        self::transitionSite($record, [
-                            'status' => AffiliateSite::STATUS_REJECTED,
-                        ]);
+                        self::withSiteOwner($record, fn (): AffiliateSite => app(RejectSite::class)->execute($record));
                     }),
                 Actions\Action::make('suspend')
                     ->icon('heroicon-o-pause')
@@ -95,9 +88,7 @@ final class AffiliateSitesTable
                     ->requiresConfirmation()
                     ->visible(fn (AffiliateSite $record): bool => $record->isVerified())
                     ->action(function (AffiliateSite $record): void {
-                        self::transitionSite($record, [
-                            'status' => AffiliateSite::STATUS_SUSPENDED,
-                        ]);
+                        self::withSiteOwner($record, fn (): AffiliateSite => app(SuspendSite::class)->execute($record));
                     }),
                 Actions\Action::make('reinstate')
                     ->icon('heroicon-o-play')
@@ -105,9 +96,7 @@ final class AffiliateSitesTable
                     ->requiresConfirmation()
                     ->visible(fn (AffiliateSite $record): bool => $record->isSuspended())
                     ->action(function (AffiliateSite $record): void {
-                        self::transitionSite($record, [
-                            'status' => AffiliateSite::STATUS_VERIFIED,
-                        ]);
+                        self::withSiteOwner($record, fn (): AffiliateSite => app(ReinstateSite::class)->execute($record));
                     }),
             ])
             ->bulkActions([
@@ -118,20 +107,15 @@ final class AffiliateSitesTable
     }
 
     /**
-     * @param  array<string, mixed>  $attributes
+     * @template TResult
+     *
+     * @param  callable(): TResult  $callback
+     * @return TResult
      */
-    private static function transitionSite(AffiliateSite $record, array $attributes): void
+    private static function withSiteOwner(AffiliateSite $record, callable $callback): mixed
     {
-        // Admin table action: run inside the site's own owner context so the
-        // re-fetch matches under owner scoping and the HasOwner saving guard
-        // accepts the write (explicit-global would 404/deny owned sites).
         $owner = OwnerContext::fromTypeAndId($record->owner_type, $record->owner_id);
 
-        OwnerContext::withOwner($owner, function () use ($record, $attributes): void {
-            AffiliateSite::query()
-                ->whereKey($record->getKey())
-                ->firstOrFail()
-                ->update($attributes);
-        });
+        return OwnerContext::withOwner($owner, $callback);
     }
 }
